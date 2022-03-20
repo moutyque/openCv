@@ -32,15 +32,14 @@ class Fighter:
 
 
 class Info:
-    def __init__(self, base_url: str, timestamp, text1: str, text2: str):
-        self.base_url = base_url
-        self.timestamp = int(timestamp / 1000)
+    def __init__(self, timestamp, text1: str, text2: str):
+        self.timestamp = formated_timestamp(timestamp)
         self.left_info = get_fighter(text1)
         self.right_info = get_fighter(text2)
         self.category = ""
 
     def __str__(self):
-        return f"{self.base_url}&t={self.timestamp}s : {self.category} : {self.left_info} vs {self.right_info}\n"
+        return f"{self.timestamp} : {self.category} : {self.left_info} vs {self.right_info}\n"
 
 
 def convert_millis(millis):
@@ -60,9 +59,9 @@ def formated_timestamp(millis):
 
 
 def read_video():
-    cap = cv2.VideoCapture("resources/day1.mp4")
+    cap = cv2.VideoCapture("resources/day2.mp4")
     fps = cap.get(cv2.CAP_PROP_FPS)
-    f = open("resources/old/timestamp_day1.txt", "w")
+    f = open("resources/timestamp_day2.txt", "w")
     f.close()
     # get total number of frames and generate a list with each fps th frame
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -85,8 +84,8 @@ def read_video():
     second_fighter_second_info = TextDetector(Area(x1=736, y1=650, x2=1035, y2=685))
 
     search_category = False
-    info = Info("https://www.youtube.com/watch?v=5xIAeX4LlGI", 0, "name1 \n club1", "name2 \n club2")
-    buffer = 9 * 60
+    info = Info(0, "name1 \n club1", "name2 \n club2")
+    buffer = 15 * 60
     for myFrameNumber in x:
         if buffer == 0 and search_category is False:
             # set which frame to read
@@ -109,8 +108,7 @@ def read_video():
                     timestamp = cap.get(cv2.CAP_PROP_POS_MSEC)
                     info1 = first_fighter_info.detect_text(frame)
                     info2 = second_fighter_info.detect_text(frame)
-                    info = Info("https://www.youtube.com/watch?v=5xIAeX4LlGI", timestamp, info1, info2)
-                    print(info)
+                    info = Info(timestamp, info1, info2)
             except:
                 traceback.print_exc()
         elif buffer == 0 and search_category is True:
@@ -119,7 +117,6 @@ def read_video():
             cap.set(cv2.CAP_PROP_POS_FRAMES, myFrameNumber)
             # read frame
             ret, frame = cap.read()
-            # frame = cv2.resize(frame, (1920, 1080))
 
             cat_text = text_detector.detect_text(
                 frame)
@@ -127,11 +124,9 @@ def read_video():
             if cat_text and ("PEE" in cat_text or "ARME" in cat_text or "HOM" in cat_text or "BOCLE" in cat_text):
                 search_category = False
                 cat_text = cat_text[0:cat_text.rfind("S") + 1]
-                # Testing
                 info.category = cat_text.strip().replace("’'", " ").replace("’/", " ")
                 info.left_info.name = first_fighter_second_info.detect_text(frame).strip()
                 info.right_info.name = second_fighter_second_info.detect_text(frame).strip()
-
                 print(info)
                 f = open("resources/timestamp_day1.txt", "a")
                 f.write(info.__str__())
