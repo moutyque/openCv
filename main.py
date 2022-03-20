@@ -7,31 +7,40 @@ import numpy as np
 from detectors import RectangleDetector, Filter, Area, TextDetector
 
 
-def format_text(text):
+def get_fighter(text):
     text = text.strip()
     try:
         if '\n' in text:
             name, club = filter(None, text.split("\n"))
             name = re.sub('[^0-9a-zA-Z ]+', '', name.strip()).strip()
-            club = re.sub('[^0-9a-zA-Z ]+', '', club.strip()).strip()
-            return name if club is None else name + " - " + club
+            team = re.sub('[^0-9a-zA-Z ]+', '', club.strip()).strip()
+            return Fighter(name=name, team=team)
         else:
-            return text
+            return Fighter(text, None)
     except ValueError as e:
         print(e)
-    return text
+    return Fighter(text, None)
+
+
+class Fighter:
+    def __init__(self, team: str, name: str):
+        self.team = team
+        self.name = name
+
+    def __str__(self):
+        return self.name if self.team is None else f"{self.name} - {self.team}"
 
 
 class Info:
     def __init__(self, base_url: str, timestamp, text1: str, text2: str):
         self.base_url = base_url
         self.timestamp = int(timestamp / 1000)
-        self.info1 = format_text(text1)
-        self.info2 = format_text(text2)
+        self.left_info = get_fighter(text1)
+        self.right_info = get_fighter(text2)
         self.category = ""
 
     def __str__(self):
-        return f"{self.base_url}&t={self.timestamp}s : {self.category} : {self.info1} vs {self.info2}\n"
+        return f"{self.base_url}&t={self.timestamp}s : {self.category} : {self.left_info} vs {self.right_info}\n"
 
 
 def convert_millis(millis):
@@ -57,20 +66,23 @@ def read_video():
     f.close()
     # get total number of frames and generate a list with each fps th frame
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    width = int(cap.get(cv2.cv2.CAP_PROP_FRAME_WIDTH))  # float `width`
-    height = int(cap.get(cv2.cv2.CAP_PROP_FRAME_HEIGHT))  # float `height`
     x = [i for i in range(1, total_frames) if divmod(i, int(fps))[1] == 0]
     buffer = 0
-    left_area = Area(y1=290, y2=790, x1=0, x2=700).fromTo(1920, 1080, width, height)
+    left_area = Area(x1=84, y1=190, x2=450, y2=530)
     left_filter = Filter(hmin=0, smin=245, vmin=72, hmax=179, smax=255, vmax=136)
     left_detector = RectangleDetector(left_area, left_filter, 1000)
 
-    right_area = Area(y1=290, y2=790, x1=1230, x2=1800).fromTo(1920, 1080, width, height)
+    right_area = Area(x1=834, y1=192, x2=1200, y2=530)
     right_filter = Filter(hmin=25, smin=155, vmin=110, hmax=360, smax=255, vmax=255)
     right_detector = RectangleDetector(right_area, right_filter, 1000)
 
-    first_fighter_info = TextDetector(Area(x1=150, x2=660, y1=170, y2=270).fromTo(1920, 1080, width, height))
-    second_fighter_info = TextDetector(Area(x1=1260, x2=1790, y1=170, y2=270).fromTo(1920, 1080, width, height))
+    first_fighter_info = TextDetector(Area(x1=84, y1=112, x2=450, y2=184))
+    second_fighter_info = TextDetector(Area(x1=834, y1=112, x2=1200, y2=184))
+
+    text_detector = TextDetector(Area(x1=526, y1=589, x2=761, y2=624))
+
+    first_fighter_second_info = TextDetector(Area(x1=225, y1=650, x2=550, y2=685))
+    second_fighter_second_info = TextDetector(Area(x1=736, y1=650, x2=1035, y2=685))
 
     search_category = False
     info = Info("https://www.youtube.com/watch?v=5xIAeX4LlGI", 0, "name1 \n club1", "name2 \n club2")
@@ -109,15 +121,17 @@ def read_video():
             ret, frame = cap.read()
             # frame = cv2.resize(frame, (1920, 1080))
 
-            text = TextDetector(Area(x1=785, x2=1140, y1=885, y2=931).fromTo(1920, 1080, width, height)).detect_text(
+            cat_text = text_detector.detect_text(
                 frame)
-            if text and ("PEE" in text or "ARME" in text or "HOM" in text or "BOCLE" in text):
-                search_category = False
 
+            if cat_text and ("PEE" in cat_text or "ARME" in cat_text or "HOM" in cat_text or "BOCLE" in cat_text):
+                search_category = False
+                cat_text = cat_text[0:cat_text.rfind("S") + 1]
                 # Testing
-                timestamp = cap.get(cv2.CAP_PROP_POS_MSEC)
-                cv2.imwrite(f"resources/out_or_v2/cat_{timestamp}.png", frame)
-                info.category = text.strip().replace("’'", " ").replace("’/", " ")
+                info.category = cat_text.strip().replace("’'", " ").replace("’/", " ")
+                info.left_info.name = first_fighter_second_info.detect_text(frame).strip()
+                info.right_info.name = second_fighter_second_info.detect_text(frame).strip()
+
                 print(info)
                 f = open("resources/timestamp_day1.txt", "a")
                 f.write(info.__str__())
