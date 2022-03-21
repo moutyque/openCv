@@ -83,6 +83,8 @@ def read_video():
     first_fighter_second_info = TextDetector(Area(x1=225, y1=650, x2=550, y2=685))
     second_fighter_second_info = TextDetector(Area(x1=736, y1=650, x2=1035, y2=685))
 
+    words = ("PEE", "ARME", "DEUX", "MAINS", "HOMMES", "FEMMES", "BOCLE", "HAST")
+
     search_category = False
     info = Info(0, "name1 \n club1", "name2 \n club2")
     buffer = 15 * 60
@@ -121,7 +123,7 @@ def read_video():
             cat_text = text_detector.detect_text(
                 frame)
 
-            if cat_text and ("PEE" in cat_text or "ARME" in cat_text or "HOM" in cat_text or "BOCLE" in cat_text):
+            if cat_text in words:
                 search_category = False
                 cat_text = cat_text[0:cat_text.rfind("S") + 1]
                 info.category = cat_text.strip().replace("’'", " ").replace("’/", " ")

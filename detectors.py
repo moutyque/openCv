@@ -29,6 +29,16 @@ class Area:
         return img[self.y1:self.y2, self.x1:self.x2]
 
 
+class TextDetector:
+    def __init__(self, area: Area):
+        self.area = area
+
+    def detect_text(self, img):
+        pytesseract.pytesseract.tesseract_cmd = "C:\\Users\\Quentin\\AppData\\Local\\Programs\\Tesseract-OCR\\tesseract.exe"
+        img = self.area.crop(img)
+        return pytesseract.image_to_string(img)
+
+
 class RectangleDetector:
     def __init__(self, area: Area, f: Filter, t: int):
         self.area = area
@@ -45,17 +55,23 @@ class RectangleDetector:
 
 
 def display_img():
-    img = cv2.imread("resources/frameTest2.png")
+    img = cv2.imread("resources/test/vlcsnap-2022-03-21-08h47m37s435.png")
 
-    left_area = Area(y1=290, y2=790, x1=0, x2=700)
+    left_area = Area(x1=84, y1=190, x2=450, y2=530)
     left_filter = Filter(hmin=0, smin=245, vmin=72, hmax=179, smax=255, vmax=136)
     left_detector = RectangleDetector(left_area, left_filter, 1000)
-    left_detector.find(img)
 
-    right_area = Area(y1=290, y2=790, x1=1230, x2=1800)
+    right_area = Area(x1=834, y1=192, x2=1200, y2=530)
     right_filter = Filter(hmin=25, smin=155, vmin=110, hmax=360, smax=255, vmax=255)
     right_detector = RectangleDetector(right_area, right_filter, 1000)
-    right_detector.find(img)
+
+    first_fighter_info = TextDetector(Area(x1=84, y1=112, x2=450, y2=184))
+    second_fighter_info = TextDetector(Area(x1=834, y1=112, x2=1200, y2=184))
+
+    text_detector = TextDetector(Area(x1=526, y1=589, x2=761, y2=624))
+
+    first_fighter_second_info = TextDetector(Area(x1=225, y1=650, x2=550, y2=685))
+    second_fighter_second_info = TextDetector(Area(x1=736, y1=650, x2=1035, y2=685))
 
     number_of_white_pix = np.sum(img == 255)
     number_of_black_pix = np.sum(img == 0)
@@ -65,30 +81,15 @@ def display_img():
     print(f"number_of_white_pix : {number_of_white_pix}")
     print(f"number_of_black_pix : {number_of_black_pix}")
 
-    cat_area = Area(x1=775, x2=1150, y1=870, y2=940)
+    res = (left_detector.find(img) and right_detector.find(img)) or (
+            (left_detector.find(img) or right_detector.find(img)) and number_of_black_pix > 35_000 and number_of_white_pix < 9_000)
+    print(f"Is the image a timestamp : {res}")
+    cat_area = Area(x1=526, y1=589, x2=761, y2=624)
     cat_filter = Filter(hmin=0, smin=106, vmin=136, hmax=24, smax=187, vmax=255)
     cat_detector = RectangleDetector(cat_area, cat_filter, 10)
     cat_detector.find(img)
     cv2.waitKey(0)
 
-
-def get_left_rectangle(img):
-    img = img[290:790, 0:700]
-    img_hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-    lower = np.array([0, 245, 72])
-    upper = np.array([179, 255, 136])
-    img_result = get_rectangle(img, cv2.inRange(img_hsv, lower, upper))
-
-    return img_result
-
-
-def get_right_rectangle(img):
-    img = img[290:790, 1230:1800]
-    img_hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-    lower = np.array([25, 155, 110])
-    upper = np.array([360, 255, 255])
-    img_result = get_rectangle(img, cv2.inRange(img_hsv, lower, upper))
-    return img_result
 
 
 def get_rectangle(img, mask):
@@ -108,16 +109,6 @@ def found_rectanlge(img, threshold):
             approx = cv2.approxPolyDP(cnt, 0.02 * peri, True)
             obj_cor = len(approx)
             return obj_cor == 4
-
-
-class TextDetector:
-    def __init__(self, area: Area):
-        self.area = area
-
-    def detect_text(self, img):
-        pytesseract.pytesseract.tesseract_cmd = "C:\\Users\\Quentin\\AppData\\Local\\Programs\\Tesseract-OCR\\tesseract.exe"
-        img = self.area.crop(img)
-        return pytesseract.image_to_string(img)
 
 
 if __name__ == '__main__':
