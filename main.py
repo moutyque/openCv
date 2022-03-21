@@ -61,7 +61,8 @@ def formated_timestamp(millis):
 def read_video():
     cap = cv2.VideoCapture("resources/day2.mp4")
     fps = cap.get(cv2.CAP_PROP_FPS)
-    f = open("resources/timestamp_day2.txt", "w")
+    timestamp_file = "resources/timestamp_day2.txt"
+    f = open(timestamp_file, "w")
     f.close()
     # get total number of frames and generate a list with each fps th frame
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -130,7 +131,7 @@ def read_video():
                 info.left_info.name = first_fighter_second_info.detect_text(frame).strip()
                 info.right_info.name = second_fighter_second_info.detect_text(frame).strip()
                 print(info)
-                f = open("resources/timestamp_day1.txt", "a")
+                f = open(timestamp_file, "a")
                 f.write(info.__str__())
                 f.close()
                 buffer = 60
